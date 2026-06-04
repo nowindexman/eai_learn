@@ -1,0 +1,113 @@
+> 原文地址：https://ternaris.gitlab.io/rosbags/examples/register_types.html
+
+# 注册自定义消息类型
+
+Rosbags 开箱即用仅支持 ROS2 默认发行版中附带的消息类型（message types）。如果你需要对自定义消息进行（反）序列化（(de)serialize），则需要手动将它们添加到类型系统（type system）中。
+
+## 从 rosbag1 注册
+
+```python
+"""Example: Register rosbag1 types."""
+# 示例：注册 rosbag1 类型
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+from rosbags.rosbag1 import Reader
+from rosbags.typesys import Stores, get_types_from_msg, get_typestore
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+def process_bag(src: Path) -> None:
+    """Register contained messages types before processing bag.
+    在处理 bag 之前注册其中包含的消息类型。
+
+    Args:
+        src: Bag to process.
+        src: 要处理的 bag 文件。
+
+    """
+    typestore = get_typestore(Stores.EMPTY)
+    with Reader(src) as reader:
+        typs = {}
+        for conn in reader.connections:
+            typs.update(get_types_from_msg(conn.msgdef.data, conn.msgtype))
+        typestore.register(typs)
+
+        # Now all message types used in the bag are registered
+        # 现在 bag 中使用的所有消息类型都已注册
+        # for conn, timestamp, data in reader.messages():
+        #     ...
+```
+
+## 从定义字符串注册
+
+```python
+"""Example: Register type from definition string."""
+# 示例：从定义字符串注册类型
+
+from __future__ import annotations
+
+from rosbags.typesys import Stores, get_types_from_msg, get_typestore
+
+# Your custom message definition
+# 你的自定义消息定义
+STRIDX_MSG = """
+string string
+uint32 index
+"""
+
+typestore = get_typestore(Stores.ROS2_FOXY)
+typestore.register(get_types_from_msg(STRIDX_MSG, 'custom_msgs/msg/StrIdx'))
+
+StrIdx = typestore.types['custom_msgs/msg/StrIdx']
+
+message = StrIdx(string='foo', index=42)
+
+# Rawdata that can be passed to rosbag2.Writer.write
+# 可以传递给 rosbag2.Writer.write 的原始数据
+rawdata = typestore.serialize_cdr(message, message.__msgtype__)
+```
+
+## 从多个文件注册
+
+```python
+"""Example: Register types from msg files."""
+# 示例：从 msg 文件注册类型
+
+from __future__ import annotations
+
+from pathlib import Path
+
+from rosbags.typesys import Stores, get_types_from_msg, get_typestore
+
+def guess_msgtype(path: Path) -> str:
+    """Guess message type name from path."""
+    """根据路径猜测消息类型名称。"""
+    name = path.relative_to(path.parents[2]).with_suffix('')
+    if 'msg' not in name.parts:
+        name = name.parent / 'msg' / name.name
+    return str(name)
+
+typestore = get_typestore(Stores.ROS2_FOXY)
+add_types = {}
+
+for pathstr in ['/path/to/custom_msgs/msg/Speed.msg', '/path/to/custom_msgs/msg/Accel.msg']:
+    msgpath = Path(pathstr)
+    msgdef = msgpath.read_text(encoding='utf-8')
+    add_types.update(get_types_from_msg(msgdef, guess_msgtype(msgpath)))
+
+typestore.register(add_types)
+
+Accel = typestore.types['custom_msgs/msg/Accel']
+Speed = typestore.types['custom_msgs/msg/Speed']
+
+Accel(42)
+Speed(42)
+```
+
+---
+
+[← 编辑 Rosbag](edit_rosbags.md) | [保存图像 →](save_images.md)

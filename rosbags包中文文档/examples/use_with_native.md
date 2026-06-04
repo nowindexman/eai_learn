@@ -1,0 +1,76 @@
+> 原文地址：https://ternaris.gitlab.io/rosbags/examples/use_with_native.html
+
+# 与 Native ROS 栈配合使用
+
+通过 rosbags 读取的消息是简单的 dataclass，它们模拟了原生 ROS2 接口。如果需要将这些消息传递给原生 ROS2 栈（native ROS2 stack），必须先将它们转换为原生对象（native objects）。
+
+## 消息实例转换
+
+```python
+"""示例：消息实例转换。"""
+
+from __future__ import annotations
+
+import importlib
+from typing import TypeVar
+
+import numpy as np
+
+T = TypeVar('T')
+
+NATIVE_CLASSES: dict[str, type] = {}
+
+def to_native(msg: object) -> object:
+    """将 rosbags 消息转换为原生消息。
+
+    Args:
+        msg: Rosbags 消息。
+
+    Returns:
+        原生消息。
+
+    """
+    msgtype: str = msg.__msgtype__  # type: ignore[attr-defined]
+    if msgtype not in NATIVE_CLASSES:
+        pkg, name = msgtype.rsplit('/', 1)
+        NATIVE_CLASSES[msgtype] = getattr(importlib.import_module(pkg.replace('/', '.')), name)
+
+    fields = {}
+    for name, field in msg.__dataclass_fields__.items():  # type: ignore[attr-defined]
+        if 'ClassVar' in field.type:
+            continue
+        value = getattr(msg, name)
+        if '__msg__' in field.type:
+            value = to_native(value)
+        elif isinstance(value, list):
+            value = [to_native(x) for x in value]
+        elif isinstance(value, np.ndarray):
+            value = value.tolist()
+        fields[name] = value
+
+    return NATIVE_CLASSES[msgtype](**fields)
+
+if __name__ == '__main__':
+    from rosbags.typesys.stores.ros2_foxy import (
+        builtin_interfaces__msg__Time,
+        sensor_msgs__msg__Image,
+        std_msgs__msg__Header,
+    )
+
+    image = sensor_msgs__msg__Image(
+        std_msgs__msg__Header(builtin_interfaces__msg__Time(42, 666), '/frame'),
+        4,
+        4,
+        'rgb8',
+        False,  # noqa: FBT003
+        4 * 3,
+        np.zeros(4 * 4 * 3, dtype=np.uint8),
+    )
+
+    native_image = to_native(image)
+    # native_image 现在可以传递给 ROS 栈了
+```
+
+---
+
+[← 保存图像](save_images.md) | [API 参考 →](../api/rosbags.md)

@@ -1,0 +1,94 @@
+> 原文地址：https://ternaris.gitlab.io/rosbags/examples/save_images.html
+
+# 将图片保存为 ROS Bag
+
+以下示例展示如何从图片创建新的 ROS bag 文件。
+
+## 保存为 rosbag1
+
+```python
+"""示例：将图片保存为 rosbag1。"""
+
+import numpy as np
+
+from rosbags.rosbag1 import Writer
+from rosbags.typesys import Stores, get_typestore
+from rosbags.typesys.stores.ros1_noetic import (
+    builtin_interfaces__msg__Time as Time,
+    sensor_msgs__msg__CompressedImage as CompressedImage,
+    std_msgs__msg__Header as Header,
+)
+
+TOPIC = '/camera'
+FRAMEID = 'map'
+
+# 包含文件名及其对应的时间戳
+IMAGES = [('homer.jpg', 42), ('marge.jpg', 43)]
+
+def save_images() -> None:
+    """遍历 IMAGES 并保存到输出 bag 文件。"""
+    typestore = get_typestore(Stores.ROS1_NOETIC)
+    with Writer('output.bag') as writer:
+        conn = writer.add_connection(TOPIC, CompressedImage.__msgtype__, typestore=typestore)
+
+        for idx, (path, timestamp) in enumerate(IMAGES):
+            msg = CompressedImage(
+                Header(
+                    seq=idx,
+                    stamp=Time(sec=int(timestamp // 10**9), nanosec=int(timestamp % 10**9)),
+                    frame_id=FRAMEID,
+                ),
+                format='jpeg',  # 也可以使用 'png'
+                data=np.fromfile(path, dtype=np.uint8),
+            )
+
+            writer.write(
+                conn,
+                timestamp,
+                typestore.serialize_ros1(msg, CompressedImage.__msgtype__),
+            )
+```
+
+## 保存为 rosbag2
+
+```python
+"""将多张图片保存为 rosbag2。"""
+
+import numpy as np
+
+from rosbags.rosbag2 import Writer
+from rosbags.typesys import Stores, get_typestore
+from rosbags.typesys.stores.ros2_foxy import (
+    builtin_interfaces__msg__Time as Time,
+    sensor_msgs__msg__CompressedImage as CompressedImage,
+    std_msgs__msg__Header as Header,
+)
+
+TOPIC = '/camera'
+FRAMEID = 'map'
+
+# 包含文件名及其对应的时间戳
+IMAGES = [('homer.jpg', 42), ('marge.jpg', 43)]
+
+def save_images() -> None:
+    """遍历 IMAGES 并保存到输出 bag 文件。"""
+    typestore = get_typestore(Stores.ROS2_FOXY)
+    with Writer('output') as writer:
+        conn = writer.add_connection(TOPIC, CompressedImage.__msgtype__, typestore=typestore)
+
+        for path, timestamp in IMAGES:
+            msg = CompressedImage(
+                Header(
+                    stamp=Time(sec=int(timestamp // 10**9), nanosec=int(timestamp % 10**9)),
+                    frame_id=FRAMEID,
+                ),
+                format='jpeg',  # 也可以使用 'png'
+                data=np.fromfile(path, dtype=np.uint8),
+            )
+
+            writer.write(conn, timestamp, typestore.serialize_cdr(msg, msg.__msgtype__))
+```
+
+---
+
+[← 注册自定义类型](register_types.md) | [与原生 ROS 配合使用 →](use_with_native.md)
