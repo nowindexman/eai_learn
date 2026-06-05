@@ -96,7 +96,7 @@ pub_hand_l   = rospy.Publisher("/robot/hand_left/joints", JointState,    queue_s
 pub_hand_r   = rospy.Publisher("/robot/hand_right/joints",JointState,    queue_size=10)
 pub_foot_l   = rospy.Publisher("/robot/foot_force_left",  WrenchStamped, queue_size=10)
 pub_foot_r   = rospy.Publisher("/robot/foot_force_right", WrenchStamped, queue_size=10)
-pub_finger_f = rospy.Publisher("/robot/finger_force",     JointState,    queue_size=10)
+pub_finger_force = rospy.Publisher("/robot/finger_force",     JointState,    queue_size=10)
 pub_cmd_vel  = rospy.Publisher("/robot/cmd_vel",          Twist,         queue_size=10)
 pub_state    = rospy.Publisher("/robot/task_state",       String,        queue_size=5, latch=True)
 
@@ -446,8 +446,8 @@ while not rospy.is_shutdown():
         cam_wrist_info.header.stamp = now
         pub_cam_wrist_info.publish(cam_wrist_info)
 
-    # ── 日志（每 2 秒一次） ─────────────────────────────────
-    if count % (HZ * 2) == 0:
+    # ── 日志（每秒 2 次，每 0.5s） ─────────────────────────────────
+    if count % (HZ // 2) == 0:
         grip_avg = sum(hand_r_js.effort) / len(hand_r_js.effort) if hand_r_js.effort else 0
         rospy.loginfo(
             f"[{state:>10s} {progress:.0%}] t={t:.1f}s | "
