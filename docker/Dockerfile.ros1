@@ -1,0 +1,25 @@
+# ROS 1 Noetic 学习环境
+# 构建：docker build -t ros1-lab -f docker/Dockerfile.ros1 .
+# 运行：docker run -it --rm --name ros1_lab -v $(pwd):/data ros1-lab
+
+FROM ros:noetic-ros-base
+
+# 避免 apt 交互
+ENV DEBIAN_FRONTEND=noninteractive
+
+# 安装 Python3 + pip + 常用工具
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        python3-pip \
+        python3-dev \
+        ros-noetic-compressed-image-transport \
+        && rm -rf /var/lib/apt/lists/*
+
+# Python 依赖（publish_demo.py 需要 opencv + numpy）
+RUN pip3 install --no-cache-dir \
+        opencv-python-headless \
+        numpy
+
+# 自动 source（每次进容器不用手动 source）
+RUN echo "source /opt/ros/noetic/setup.bash" >> /root/.bashrc
+
+WORKDIR /data

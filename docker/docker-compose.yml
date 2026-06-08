@@ -1,0 +1,29 @@
+# 使用方法：
+#   构建镜像：docker compose build
+#   启动 ROS 1：docker compose run --rm ros1
+#   启动 ROS 2：docker compose run --rm ros2
+#   同时启动：docker compose up -d
+#   进入已运行的容器：docker exec -it ros1_lab bash / docker exec -it ros2_lab bash
+
+services:
+  ros1:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.ros1
+    container_name: ros1_lab
+    volumes:
+      - ..:/data
+    stdin_open: true
+    tty: true
+    command: bash
+
+  ros2:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.ros2
+    container_name: ros2_lab
+    volumes:
+      - ..:/data
+    stdin_open: true
+    tty: true
+    command: bash

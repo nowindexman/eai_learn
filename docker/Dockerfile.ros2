@@ -1,0 +1,25 @@
+# ROS 2 Humble 学习环境
+# 构建：docker build -t ros2-lab -f docker/Dockerfile.ros2 .
+# 运行：docker run -it --rm --name ros2_lab -v $(pwd):/data ros2-lab
+
+FROM ros:humble-ros-base
+
+# 避免 apt 交互
+ENV DEBIAN_FRONTEND=noninteractive
+
+# 安装 Python3 + pip + MCAP 存储插件
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        python3-pip \
+        python3-dev \
+        ros-humble-rosbag2-storage-mcap \
+        && rm -rf /var/lib/apt/lists/*
+
+# Python 依赖（publish_demo_ros2.py 需要 opencv + numpy）
+RUN pip3 install --no-cache-dir \
+        opencv-python-headless \
+        numpy
+
+# 自动 source（每次进容器不用手动 source）
+RUN echo "source /opt/ros/humble/setup.bash" >> /root/.bashrc
+
+WORKDIR /data
