@@ -1,7 +1,6 @@
-### 2. rosbag v1 核心命令
+## 2. ROS 1 rosbag 核心命令
 
-> **前置条件**：rosbag v1 的所有命令都依赖 `roscore`（ROS 主节点）。先启动容器，后台运行 roscore，再执行后续操作。
-> 否则会报 `Failed to contact master at [localhost:11311]`。
+> **前置条件**：`rosbag record` 和 `rosbag play` 通常需要 ROS Master（`roscore`）；`rosbag info`、`filter`、`compress`、`reindex` 等离线文件操作通常不需要。需要在线连接时，先启动 `roscore`。
 
 ```bash
 # ━━━ 方式一：用 Dockerfile（推荐，已预装所有依赖） ━━━
@@ -62,7 +61,7 @@ float64[12] P           # ← CameraInfo 的投影矩阵，3×4 展平 = 12 个�
 
 ##### 通用结构：`std_msgs/Header`
 
-几乎所有 ROS 消息都包含一个 `header` 字段，它是消息的“身份证”：
+许多传感器消息包含一个 `header` 字段，它用于记录时间和坐标系；不是所有 ROS 消息都有 `header`：
 
 ```bash
 std_msgs/Header header
@@ -75,7 +74,7 @@ std_msgs/Header header
 
 | 字段 | 作用 | 示例 |
 |------|------|------|
-| `seq` | 消息序号，用于检测丢包 | `0, 1, 2, ... 2465` |
+| `seq` | ROS 1 消息序号，可辅助排查顺序问题，但不能单独证明网络丢包 | `0, 1, 2, ... 2465` |
 | `stamp` | 时间戳，用于多传感器时间对齐 | `1780625604.850000000` |
 | `frame_id` | 坐标系，用于 TF 坐标变换 | `"odom"`, `"base_link"`, `"head_camera_link"` |
 
@@ -98,7 +97,7 @@ img_msg.header.frame_id = "head_camera_link"  # "这张图是从 head_camera_lin
 imu_msg.header.frame_id = "torso_imu"          # "这个加速度是在 torso_imu 位置测的"
 ```
 
-所有 `frame_id` 通过 **TF（Transform，坐标变换）树** 关联在一起：
+需要参与坐标变换的 `frame_id` 应通过 **TF（Transform，坐标变换）树** 建立关系；实际数据也可能存在尚未连接的 frame：
 ```
 TF 树：
 
@@ -126,12 +125,12 @@ TF 换算：head_camera_link → head_link → base_link
 
 | 场景 | 能不能随便写 | 后果 |
 |------|------------|------|
-| 只录 bag 不做坐标变换 | 可以 | bag 能正常回放 |
+| 只录 bag 不做坐标变换 | 可以不发布完整 TF，但仍应填写真实、稳定的名称 | bag 能回放，后续处理仍依赖语义 |
 | 要给 rviz 可视化 | 不行 | TF 对不上，模型散架 |
 | 要做多传感器融合 | 不行 | 坐标换算出错 |
-| 训练 AI 模型 | 可以 | 训练不用 TF |
+| 训练 AI 模型 | 不能随意伪造 | 坐标语义可能影响融合、动作和复用 |
 
-> 具身智能行业有标准命名约定：`base_link`、`odom`、`head_camera_link`、`wrist_camera_link` 等，大部分公司都这么叫。
+> `base_link`、`odom`、相机 link 等是常见约定，但最终名称和坐标关系应以具体机器人项目的 TF/URDF 定义为准。
 
 **哪些消息有 Header，哪些没有：**
 
@@ -230,12 +229,14 @@ nav_msgs/Odometry
 #### 录制数据：`rosbag record`
 
 ```bash
-# 先后台启动录制，再运行发布脚本
-nohup rosbag record -a -O /data/demo.bag > /tmp/rosbag.log 2>&1 &
+# 先后台启动录制，再运行发布脚本；用 SIGINT 让 rosbag 正常收尾
+rosbag record -a -O /data/demo.bag > /tmp/rosbag.log 2>&1 &
+bag_pid=$!
 sleep 1
 python3 /data/publish_demo.py
-# Ctrl+C 停止发布，然后停掉录制
-pkill -f 'rosbag record'
+# Ctrl+C 停止发布，然后正常停止录制
+kill -INT "$bag_pid"
+wait "$bag_pid"
 ```
 
 也可以手动分步操作：
@@ -243,15 +244,15 @@ pkill -f 'rosbag record'
 # 进入容器
 docker exec -it ros1_lab bash
 
-# 录制所有话题 
-# 没结束之前都是 zyw_2026-06-05-02-13-11.bag.active 这种形态的 
+# 录制所有话题
+# 没结束之前都是 zyw_2026-06-05-02-13-11.bag.active 这种形态的
 # 结束之后才会去掉active
 rosbag record -a
 
 # 录制指定话题，输出文件名由 -O 指定
 rosbag record -O my_record.bag /sensor/status /sensor/temperature
 
-# 录制时自动切分：每200MB或每10分钟切一个文件
+# 录制时自动切分：每 200MB 或每 10 分钟切一个文件
 rosbag record --split --size=200 --duration=10m /scan
 ```
 
@@ -259,24 +260,22 @@ rosbag record --split --size=200 --duration=10m /scan
 - `-a`：录制所有正在发布的话题。
 - `-O`：指定输出文件名（不加 .bag 会自动补上）。
 - `--split`：按大小或时间切分，适合长时间采集。
-- `--duration=10m`：录制10分钟后自动停止。
-- `-j`：压缩（`bz2` 或 `lz4`），后面会提到。
+- `--duration=10m`：配合 `--split` 时表示每个分片的时长，不是整个录制过程的总时长。
+- `-j`：使用 bz2 压缩；lz4 使用独立的 `--lz4` 选项。
 
 #### 查看信息：`rosbag info`
 
 ```bash
-# 先停掉录制进程
-pkill -f 'rosbag record'
-
+# 先在录制终端按 Ctrl+C，让 rosbag 正常写完索引
 rosbag info /data/demo.bag
 ```
 
 输出会显示：
 - 文件路径、版本、持续时间、文件大小。
-- 话题列表，每个话题的消息数量、类型、平均频率。
-- 各话题的时间戳范围（起止时间）。
+- 话题列表、每个话题的消息数量和类型；不同 ROS 版本/选项可能额外显示频率等统计。
+- 文件整体的起止时间；要得到每个话题的精确频率和时间范围，应单独统计或用 `rostopic hz` 等工具核对。
 
-际输出（14 个话题完整录制）：
+示意输出（14 个业务话题，可能还包含 `/rosout` 等系统话题；数字以实际 `rosbag info` 为准）：
 ```
 path:        zyw_2026-06-05-02-13-11.bag
 version:     2.0
@@ -325,10 +324,10 @@ topics:      /camera/head/camera_info     483 msgs    : sensor_msgs/CameraInfo
 | **size** | `13.8 MB` | 文件体积，包含消息数据 + 索引 + 消息定义 |
 | **messages** | `24374` | 所有话题的消息条数之和 |
 | **compression** | `none [18/18 chunks]` | 压缩方式。`none`=未压缩，`18/18`=共 18 个 chunk 全未压缩。chunk 是 bag 内部存储单元，默认约 768KB/个。用 `--lz4` 或 `--bz2` 可启用压缩 |
-| **types** | `geometry_msgs/Twist [9f195f...]` | 用到的所有消息类型 + MD5 校验和。MD5 由消息定义文件计算，**同一版本 ROS 全球统一不变**，用于防止类型不匹配 |
+| **types** | `geometry_msgs/Twist [9f195f...]` | 用到的消息类型 + MD5 校验和。MD5 由消息定义文本计算，连接时用于检查类型是否匹配；自定义消息应把定义来源一起记录 |
 | **topics** | 每行一个话题 | 话题名、消息数、消息类型 |
 | **msgs** | `2466 msgs` | 该话题在录制期间收到的总消息数 |
-| **(N connections)** | `(2 connections)` | 有多少个不同节点向该话题发布消息。没标注=默认 1 个。`/rosout` 有 2 个：publish_demo.py + rosbag 自身 |
+| **(N connections)** | `(2 connections)` | 录制文件中该话题对应的连接数量；具体来源以实际节点和录制过程为准，不要固定理解为 rosbag 自身发布 |
 
 #### 消息数反推频率
 
@@ -464,7 +463,7 @@ rosbag filter demo.bag no_images.bag "not '/image' in topic and not '/camera_inf
 
 ##### 文件检查：`rosbag check`
 
-检查 bag 文件是否与当前 ROS 版本兼容（消息类型定义是否需要迁移）：
+检查 bag 中的消息定义是否需要迁移；它不是通用的文件完整性检查：
 ```bash
 rosbag check demo.bag
 ```
@@ -483,24 +482,20 @@ The following migrations need to occur:
 ##### 压缩与解压：`rosbag compress` / `decompress`
 
 ```bash
-# 压缩为 lz4（推荐，速度快，压缩率约 40-60%）
+# 压缩为 lz4；压缩率取决于消息内容
 rosbag compress --lz4 demo.bag
-# 压缩后的文件覆盖原文件名 demo.bag
-# 压缩前的原始文件被重命名为 demo.orig.bag（orig = original）
 
 # 压缩为 bz2（压缩率更高，但慢）
 rosbag compress --bz2 demo.bag
 
-# 不保留原始文件（省空间，直接覆盖）
+# 是否覆盖或保留备份取决于命令参数和 ROS 版本，生产数据请先备份
 rosbag compress --lz4 --force demo.bag
-# 不生成 .orig.bag，压缩后直接覆盖原文件
 
-# 解压（play 也能自动解压，一般不需要手动解压） 解压也会生成新的 .bag 文件和orig文件
-rosbag decompress demo.bag.lz4.bag
+# 解压；文件名是否带压缩后缀不要靠猜，直接把实际 bag 路径传给命令
+rosbag decompress demo.bag
 ```
-> **`.orig.bag` 是什么？** `orig` = **original**（原始的）。`rosbag compress` 默认会把压缩前的文件重命名为 `.orig.bag` 作为备份，压缩后的文件使用原文件名。这是 Unix/Linux 世界的常见惯例（`patch`、`sed -i` 等工具也用 `.orig` 表示原始版本）。
->
-> **实际经验**：50Hz 的 56 关节 + 双相机，1 分钟原始数据约 20-30 MB，lz4 压缩后约 8-12 MB。
+
+> 压缩比例与图像、点云、数值消息的内容有关，教材不应写死一个通用比例。
 
 ##### 修复索引：`rosbag reindex`
 
@@ -508,10 +503,10 @@ rosbag decompress demo.bag.lz4.bag
 ```bash
 # 修复损坏的 bag 文件
 rosbag reindex broken.bag
-# 生成 broken.bag.reindex.bag，原文件保留
+# 以命令输出的重建路径为准；不要假定所有版本都生成同名文件
 
-# 修复后验证
-rosbag info broken.bag.reindex.bag
+# 把上一步命令输出的实际路径替换到这里再验证
+rosbag info path_from_reindex_output.bag
 ```
 
 ##### 实时查看话题：`rostopic`
@@ -610,14 +605,14 @@ rosbag record -a -x '/rosout.*' -O clean_demo.bag
 rosbag record /robot/joint_states /camera/head/image -O joints_cam.bag
 
 # 延迟 5 秒后开始录（等待系统稳定）
-rosbag record -a --pause -O delayed.bag
-# 然后另一个终端：rosservice call /record/start
+sleep 5
+rosbag record -a -O delayed.bag
 
-# 限制最大录制时长
-rosbag record -a --duration=30 -O short_demo.bag
+# GNU/Linux 容器中限制总录制时长，并发送 SIGINT 让文件正常收尾
+timeout --signal=INT 30s rosbag record -a -O short_demo.bag
 
 # 录制时启用 lz4 压缩（边录边压）
-rosbag record -a -j --lz4 -O compressed_demo.bag
+rosbag record -a --lz4 -O compressed_demo.bag
 ```
 
 ##### 回放高级技巧
@@ -652,11 +647,12 @@ rosbag play demo.bag
 | `rosbag record /topic1 /topic2` | 只录指定话题 | `-O name` 指定文件名 |
 | `rosbag record -a -x '/rosout.*'` | 录所有但排除某些 | `-x` 正则排除 |
 | `rosbag record -a --split --size=200` | 按大小切分 | 每 200MB 一个新文件 |
-| `rosbag record -a --duration=30` | 限时录制 | 30 秒后自动停止 |
-| `rosbag record -a -j --lz4` | 边录边压缩 | 节省磁盘空间 |
+| `rosbag record -a --split --duration=30s` | 按时长切分 | 每个分片 30 秒 |
+| `timeout --signal=INT 30s rosbag record -a` | 限时录制 | GNU/Linux 中 30 秒后正常停止 |
+| `rosbag record -a --lz4` | 边录边压缩 | 节省磁盘空间 |
 | **查看** | | |
 | `rosbag info demo.bag` | 查看 bag 元数据 | 时长/话题/消息数/大小 |
-| `rosbag check demo.bag` | 检查文件完整性 | 验证 MD5 是否匹配 |
+| `rosbag check demo.bag` | 检查消息迁移 | 判断消息定义是否需要迁移 |
 | **回放** | | |
 | `rosbag play demo.bag` | 正常回放 | 空格暂停，s 单步 |
 | `rosbag play demo.bag --rate=5` | 5 倍速回放 | |
@@ -670,9 +666,9 @@ rosbag play demo.bag
 | | `"t.secs > 10 and t.secs < 20"` | 只保留时间段 |
 | | `"topic in ['/t1', '/t2']"` | 保留多个话题 |
 | **维护** | | |
-| `rosbag compress --lz4 demo.bag` | 压缩文件 | 生成 .lz4.bag |
+| `rosbag compress --lz4 demo.bag` | 压缩文件 | 具体文件布局以命令输出为准 |
 | `rosbag decompress demo.bag` | 解压文件 | |
-| `rosbag reindex broken.bag` | 修复索引 | 处理崩溃中断的 bag |
+| `rosbag reindex broken.bag` | 重建索引 | 处理崩溃中断的 bag；不能恢复已丢失消息 |
 | **实时监控** | | |
 | `rostopic list` | 列出所有话题 | |
 | `rostopic echo /topic` | 实时查看消息 | `--noarr` 省略数组 |
@@ -681,4 +677,3 @@ rosbag play demo.bag
 | `rosnode list` | 列出所有节点 | |
 | `rosnode info /node` | 查看节点详情 | |
 | `rosmsg show pkg/Msg` | 查看消息字段定义 | |
-

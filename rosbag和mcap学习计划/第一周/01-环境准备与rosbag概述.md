@@ -1,4 +1,6 @@
---来着下面为你详细展开第一周的学习内容，目标是**不写代码，纯用命令行就能熟练查看、录制、回放和简单处理两种格式**，同时对两种格式的定位和内部原理建立起清晰的概念。
+# 第一周：环境准备与 rosbag 概述
+
+本周目标是**先用命令行建立正确概念**：能查看、录制、回放和简单处理 ROS bag 与 MCAP，同时分清它们的文件形态和适用边界。
 
 ---
 
@@ -8,19 +10,19 @@
 
 - **rosbag v1 命令**：需安装 ROS 1 基础包。如果不想装完整 ROS，最简单的是用 Docker：
   ```bash
-  docker run -it  -v /Users/zhangyawen/Documents/清雁文档/具身智能:/data ros:noetic-ros-base
+  docker run -it --rm -v "$(pwd)":/data ros:noetic-ros-base
   ```
   进入容器后，`rosbag` 命令即可用。
-- **rosbag v2 命令**：需要 ROS 2 环境，同样可用 Docker：
+- **rosbag2 命令**：需要 ROS 2 环境，同样可用 Docker：
   ```bash
-  docker run -it  -v /Users/zhangyawen/Documents/清雁文档/具身智能:/data ros:humble-ros-base
+  docker run -it --rm -v "$(pwd)":/data ros:humble-ros-base
   ```
   之后 `ros2 bag` 命令可用。
-- **MCAP 命令**：只需 Python 环境：
+- **MCAP Python SDK**：只需 Python 环境：
   ```bash
-  pip install mcap
+  python -m pip install mcap
   ```
-  这会安装 `mcap` 命令行工具，同时提供 Python SDK。
+  这安装的是 Python SDK。`mcap` CLI 需要单独安装，安装后先执行 `mcap --help` 确认版本和参数。
 
 > 如果你的主要目的是搭建数据处理系统，MCAP 部分可以立刻在自己电脑上实操；rosbag 部分在容器里练习即可。
 
@@ -32,6 +34,13 @@
 
 rosbag 是 ROS 生态中用来记录和回放“话题消息”的工具。它本质上是一个**日志文件**，按时间顺序存储了 ROS 计算图中流通的消息。
 
-- **rosbag v1**（ROS 1 时代）：文件扩展名 `.bag`，内部是自定义二进制格式，消息类型定义（.msg 文件）需要外置或嵌入。
-- **rosbag v2**（ROS 2 时代）：默认使用 SQLite3 数据库存储，扩展名也是 `.bag` 但其实是 SQLite 文件（可以用 `sqlite3` 命令打开查看）。通过插件机制，**也可以直接使用 MCAP 作为存储后端**，此时扩展名通常为 `.mcap`。
+- **rosbag1**（ROS 1 时代）：通常是单个 `.bag` 文件，内部保存连接、索引和消息数据；解析仍需要匹配的 ROS 消息定义。
+- **rosbag2**（ROS 2 时代）：通常是一个 bag URI 目录，里面有 `metadata.yaml` 和一个或多个 `.db3` 或 `.mcap` 存储文件。默认后端随 ROS 发行版变化，也可以通过插件显式指定。
 
+示例：
+
+```text
+my_bag/
+├── metadata.yaml
+└── my_bag_0.db3 或 my_bag_0.mcap
+```
