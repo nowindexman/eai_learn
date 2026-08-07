@@ -124,6 +124,9 @@ average rate: 42.081
 #### 录制数据：`ros2 bag record`
 
 ```bash
+
+docker exec -it ros2_lab bash
+
 # 录制所有话题（后端由发行版/插件决定，自动生成时间戳目录名）
 ros2 bag record --all
 # 生成目录：rosbag2_2026_06_05-02_13_11/

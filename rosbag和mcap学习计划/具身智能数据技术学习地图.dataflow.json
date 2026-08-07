@@ -1,0 +1,198 @@
+{
+  "schema_version": 1,
+  "diagram_type": "dataflow",
+  "meta": {
+    "title": "具身智能数据技术学习地图",
+    "subtitle": "从 ROS 记录到可追溯训练数据：四周计划中的关键技术点与判断边界",
+    "output": "具身智能数据技术学习地图.html",
+    "viewBox": [1250, 820],
+    "animation": "none",
+    "visual_preset": "signal-flow",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "week-one",
+        "label": "第一周：命令与格式",
+        "focus": ["orientation", "cli", "storage", "mcap_structure"],
+        "note": "先区分 ROS 生态工具、rosbag2 后端与 MCAP 容器，再完成录制、查看和回放。"
+      },
+      {
+        "id": "week-two",
+        "label": "第二周：读取与解码",
+        "focus": ["mcap_structure", "reader", "decode"],
+        "note": "理解记录结构、序列化编码和消息类型定义之间的关系。"
+      },
+      {
+        "id": "week-three",
+        "label": "第三周：同步与数据集",
+        "focus": ["time_sync", "normalize", "dataset", "quality"],
+        "note": "将消息变成可分析、可训练的数据，同时保留时间、单位、坐标系和质量信息。"
+      },
+      {
+        "id": "week-four",
+        "label": "第四周：可复现工程",
+        "focus": ["quality", "pipeline", "manifest"],
+        "note": "用分层、幂等、校验和、manifest 和版本管理把脚本变成可恢复流水线。"
+      }
+    ]
+  },
+  "stages": [
+    { "label": "定位" },
+    { "label": "命令与记录" },
+    { "label": "读取与解码" },
+    { "label": "同步与数据集" },
+    { "label": "质量与工程" }
+  ],
+  "nodes": [
+    {
+      "id": "orientation",
+      "type": "external",
+      "label": "ROS/MCAP 定位",
+      "sublabel": "工具 vs 容器",
+      "stage": 0,
+      "row": 0,
+      "tag": "总览"
+    },
+    {
+      "id": "cli",
+      "type": "frontend",
+      "label": "CLI 三件套",
+      "sublabel": "record / play / info",
+      "stage": 1,
+      "row": 0,
+      "tag": "第1周"
+    },
+    {
+      "id": "storage",
+      "type": "database",
+      "label": "存储后端",
+      "sublabel": "db3 / MCAP / URI",
+      "stage": 1,
+      "row": 2,
+      "tag": "rosbag2"
+    },
+    {
+      "id": "mcap_structure",
+      "type": "database",
+      "label": "MCAP 结构",
+      "sublabel": "schema + index",
+      "stage": 2,
+      "row": 0,
+      "tag": "容器层"
+    },
+    {
+      "id": "reader",
+      "type": "backend",
+      "label": "统一读取",
+      "sublabel": "AnyReader / SDK",
+      "stage": 2,
+      "row": 2,
+      "tag": "第2周"
+    },
+    {
+      "id": "decode",
+      "type": "backend",
+      "label": "反序列化",
+      "sublabel": "ROS1 / ROS2 / CDR",
+      "stage": 2,
+      "row": 4,
+      "tag": "类型支持"
+    },
+    {
+      "id": "time_sync",
+      "type": "backend",
+      "label": "时间与同步",
+      "sublabel": "log / header.stamp",
+      "stage": 3,
+      "row": 4,
+      "tag": "time_ns"
+    },
+    {
+      "id": "normalize",
+      "type": "backend",
+      "label": "规范化",
+      "sublabel": "unit / frame",
+      "stage": 3,
+      "row": 2,
+      "tag": "保语义"
+    },
+    {
+      "id": "dataset",
+      "type": "database",
+      "label": "Parquet",
+      "sublabel": "state + action",
+      "stage": 3,
+      "row": 0,
+      "tag": "episode"
+    },
+    {
+      "id": "quality",
+      "type": "frontend",
+      "label": "质量验收",
+      "sublabel": "Foxglove / QA",
+      "stage": 4,
+      "row": 0,
+      "tag": "第3周"
+    },
+    {
+      "id": "pipeline",
+      "type": "backend",
+      "label": "处理流水线",
+      "sublabel": "分层 + 重跑",
+      "stage": 4,
+      "row": 2,
+      "tag": "第4周"
+    },
+    {
+      "id": "manifest",
+      "type": "database",
+      "label": "Manifest",
+      "sublabel": "SHA / schema",
+      "stage": 4,
+      "row": 4,
+      "tag": "可追溯"
+    }
+  ],
+  "flows": [
+    { "id": "orientation-cli", "from": "orientation", "to": "cli", "label": "操作能力", "classification": "第1周", "variant": "emphasis", "route": "straight" },
+    { "id": "cli-storage", "from": "cli", "to": "storage", "label": "bag URI", "classification": "recording", "variant": "emphasis", "route": "vertical-channel" },
+    { "id": "storage-structure", "from": "storage", "to": "mcap_structure", "label": "文件记录", "classification": "container", "variant": "emphasis", "route": "auto", "fromSide": "right", "toSide": "top" },
+    { "id": "structure-reader", "from": "mcap_structure", "to": "reader", "label": "records", "classification": "read", "variant": "emphasis", "route": "vertical-channel", "labelDy": 24 },
+    { "id": "reader-decode", "from": "reader", "to": "decode", "label": "raw bytes", "classification": "decode", "variant": "emphasis", "route": "vertical-channel" },
+    { "id": "decode-time", "from": "decode", "to": "time_sync", "label": "时间字段", "classification": "semantics", "variant": "emphasis", "route": "top-channel" },
+    { "id": "time-normalize", "from": "time_sync", "to": "normalize", "label": "time_ns", "classification": "alignment", "variant": "emphasis", "route": "vertical-channel" },
+    { "id": "normalize-dataset", "from": "normalize", "to": "dataset", "label": "状态/动作", "classification": "derived", "variant": "emphasis", "route": "vertical-channel" },
+    { "id": "dataset-quality", "from": "dataset", "to": "quality", "label": "episode", "classification": "gate", "variant": "emphasis", "route": "straight" },
+    { "id": "quality-pipeline", "from": "quality", "to": "pipeline", "label": "quality gate", "classification": "re-runnable", "variant": "security", "route": "vertical-channel" },
+    { "id": "pipeline-manifest", "from": "pipeline", "to": "manifest", "label": "lineage", "classification": "auditable", "variant": "emphasis", "route": "vertical-channel" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "先分清三层",
+      "items": [
+        "rosbag/rosbag2 是 ROS 生态的录制工具与管理方式",
+        "MCAP 是可承载多种编码的开放式容器",
+        "容器能读、消息能解码、业务语义正确是三件事"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "数据集化关键",
+      "items": [
+        "时间基准要明确：log time 还是 header.stamp",
+        "单位、关节顺序、frame_id 和缺失策略不能靠猜",
+        "Parquet/图像索引是派生结果，不替代原始日志"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "工程闭环",
+      "items": [
+        "raw 原始数据只读，阶段输出分层保存",
+        "同一输入、配置和代码版本应可幂等重跑",
+        "manifest、SHA-256、质量报告共同证明可复现"
+      ]
+    }
+  ]
+}
