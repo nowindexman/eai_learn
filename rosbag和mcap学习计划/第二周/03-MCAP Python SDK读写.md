@@ -66,7 +66,6 @@ import json
 import time
 from pathlib import Path
 
-from mcap.records import Channel, Message, Schema
 from mcap.writer import Writer
 
 
@@ -77,20 +76,16 @@ def write_json_mcap(path: Path) -> None:
         writer.start(profile="", library="eai-learn-mcap-example")
 
         schema_id = writer.register_schema(
-            Schema(
-                name="ExampleState",
-                encoding="jsonschema",
-                data=(
-                    b'{"type":"object","properties":{"value":{"type":"number"}}}'
-                ),
-            )
+            name="ExampleState",
+            encoding="jsonschema",
+            data=(
+                b'{"type":"object","properties":{"value":{"type":"number"}}}'
+            ),
         )
         channel_id = writer.register_channel(
-            Channel(
-                topic="/example/state",
-                message_encoding="json",
-                schema_id=schema_id,
-            )
+            topic="/example/state",
+            message_encoding="json",
+            schema_id=schema_id,
         )
 
         for index in range(3):
@@ -100,12 +95,10 @@ def write_json_mcap(path: Path) -> None:
                 separators=(",", ":"),
             ).encode("utf-8")
             writer.add_message(
-                Message(
-                    channel_id=channel_id,
-                    log_time=timestamp_ns,
-                    publish_time=timestamp_ns,
-                    data=payload,
-                )
+                channel_id=channel_id,
+                log_time=timestamp_ns,
+                publish_time=timestamp_ns,
+                data=payload,
             )
 
         writer.finish()
@@ -122,7 +115,7 @@ mcap list schemas example-json.mcap
 mcap cat example-json.mcap --topics /example/state --json
 ```
 
-如果本机 SDK 版本对 `Writer` 参数有差异，以该版本的官方示例和 `inspect.signature()` 为准；不要凭网上旧示例混用 `Schema`/`Channel` 对象 API 与关键字注册 API。
+当前官方 Python SDK 的 `Writer` 使用关键字参数注册 schema/channel，并以关键字参数添加消息。若本机 SDK 版本有差异，以该版本的官方示例和 `inspect.signature()` 为准；不要凭网上旧示例混用记录对象 API 与 `Writer` 的关键字 API。
 
 ## 4. 读取 JSON message
 

@@ -76,6 +76,8 @@ elif connection.msgtype.endswith("Odometry"):
     print("xyz:", position.x, position.y, position.z)
 ```
 
+这段代码面向 `rosbags.AnyReader` 反序列化后的统一消息对象；它会将 ROS 1 类型归一化为 ROS 2 风格，因此这里访问的是 `sec`/`nanosec`。若直接处理原生 ROS 1 `genpy.Time`，字段名是 `secs`/`nsecs`，不能混用。
+
 数组长度不是默认固定的。`JointState` 的 `name`、`position`、`velocity`、`effort` 可能长度不同或为空；表格化前要先决定缺失值策略，不能按下标盲目拼接。
 
 ## 4. `log_time` 与 `header.stamp`

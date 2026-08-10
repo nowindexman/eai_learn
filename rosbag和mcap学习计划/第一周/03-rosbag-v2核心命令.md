@@ -172,6 +172,8 @@ ros2 bag record --all --use-sim-time -o sim_bag
 - `--use-sim-time`：使用 `/clock` 话题作为时间源。
 - `--no-discovery`：禁止自动发现新话题（只录启动时已有的）。
 
+使用 `--use-sim-time` 时，录制器需要先收到有效的 `/clock` 才能建立仿真时间基准；`/clock` 缺失、停滞或重置会直接影响 bag 的记录时间范围。录制前应确认 `/clock` 正在发布，并在检查报告中记录该时间域。
+
 > **与 v1 关键区别**：v1 用 `-O`（大写 O）指定文件名，v2 用 `-o`（小写 o）指定 bag URI。通常 v2 生成一个目录，目录中再放 `metadata.yaml` 和存储文件。
 
 实际输出（录制过程）：
