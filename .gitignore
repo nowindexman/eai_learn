@@ -1,2 +1,8 @@
 .idea/
 /数据采集样本/
+
+# ROS2 rosbag 录制文件（二进制大文件，用对象存储管理）
+*.bag
+
+# ROS2 官方文档（单独管理，不纳入此仓库）
+/ros2_documentation/
