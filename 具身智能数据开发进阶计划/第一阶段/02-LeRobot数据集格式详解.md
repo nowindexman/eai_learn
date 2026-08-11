@@ -382,4 +382,4 @@ print(f"episode_index: {sample['episode_index']}")
 3. 手动修改 `stats.json` 中的一个 mean 值，观察加载后的数据是否受影响（它不会，因为 stats 是训练代码读取的，不是 DataLoader 自动应用的）。
 4. 思考：如果你有 2 个相机，每个 episode 500 帧，30 FPS，你该怎么组织 `videos/` 目录？
 
-下一篇将解释这些数据怎么变成模型能消费的 tensor——特别是 observation window 和 action chunk 的概念。
+下一篇将深入 HDF5 (robomimic) 数据集格式——另一种同样重要的训练数据格式。
