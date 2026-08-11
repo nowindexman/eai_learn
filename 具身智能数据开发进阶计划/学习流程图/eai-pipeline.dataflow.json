@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "diagram_type": "dataflow",
+  "meta": {
+    "title": "具身智能数据开发全链路",
+    "subtitle": "从采集到训练的完整数据管线 · 三阶段进阶计划",
+    "output": "diagrams/eai-pipeline.dataflow.html",
+    "viewBox": [1200, 760],
+    "quality_profile": "showcase",
+    "views": [
+      { "id": "phase1", "label": "第一阶段：训练格式", "focus": ["lerobot", "hdf5", "zarr", "act", "dp"], "note": "训练数据格式与模型接口——从 bag 到可训练数据集的转换" },
+      { "id": "phase2", "label": "第二阶段：采集系统", "focus": ["teleop", "sensors", "vendor_sdk", "bag"], "note": "ROS 运行时、QoS、TF、传感器驱动与遥操作采集" },
+      { "id": "phase3", "label": "第三阶段：规模化", "focus": ["pipeline", "lerobot", "hdf5"], "note": "Ray 分布式、云存储、数据版本管理与端到端监控" }
+    ]
+  },
+  "stages": [
+    { "label": "采集端" },
+    { "label": "原始归档" },
+    { "label": "处理流水线" },
+    { "label": "训练格式" },
+    { "label": "模型训练" }
+  ],
+  "nodes": [
+    { "id": "teleop", "type": "frontend", "label": "遥操作采集", "sublabel": "VR · 双臂示教 · Space Mouse", "stage": 0, "row": 0, "tag": "episode" },
+    { "id": "sensors", "type": "external", "label": "传感器驱动", "sublabel": "相机 · IMU · 关节 · 力矩", "stage": 0, "row": 2, "tag": "QoS · TF" },
+    { "id": "bag", "type": "database", "label": "ROS bag / MCAP", "sublabel": "rosbag2 URI · SQLite3 / MCAP", "stage": 1, "row": 1, "tag": "CDR 序列化" },
+    { "id": "vendor_sdk", "type": "database", "label": "厂商 SDK 格式", "sublabel": "Orbbec native BAG 等", "stage": 1, "row": 3, "tag": "非 ROS" },
+    { "id": "pipeline", "type": "backend", "label": "检查 · 同步 · 质量", "sublabel": "时间对齐 · 质量检查", "stage": 2, "row": 1, "tag": "inspect → align → quality" },
+    { "id": "lerobot", "type": "database", "label": "LeRobot Dataset", "sublabel": "Parquet + MP4 + JSON", "stage": 3, "row": 0, "tag": "HF 生态" },
+    { "id": "hdf5", "type": "database", "label": "HDF5", "sublabel": "robomimic 约定", "stage": 3, "row": 1, "tag": "学术论文主流" },
+    { "id": "zarr", "type": "database", "label": "Zarr", "sublabel": "分块二进制", "stage": 3, "row": 2, "tag": "DP 官方" },
+    { "id": "act", "type": "backend", "label": "ACT / VLA", "sublabel": "Action Chunking · 语言指令", "stage": 4, "row": 0, "tag": "obs + action chunk" },
+    { "id": "dp", "type": "backend", "label": "Diffusion Policy", "sublabel": "扩散策略", "stage": 4, "row": 2, "tag": "obs horizon" }
+  ],
+  "flows": [
+    { "id": "teleop-to-bag", "from": "teleop", "to": "bag", "label": "关节 + 图像 + 动作", "classification": "主路径", "variant": "emphasis", "fromSide": "right", "toSide": "left" },
+    { "id": "sensors-to-bag", "from": "sensors", "to": "bag", "label": "相机 / IMU 帧", "classification": "传感器流", "variant": "default", "fromSide": "right", "toSide": "left" },
+    { "id": "sensors-to-vendor", "from": "sensors", "to": "vendor_sdk", "label": "Orbbec native", "classification": "非 ROS 采集", "variant": "dashed", "fromSide": "right", "toSide": "left" },
+    { "id": "vendor-to-pipeline", "from": "vendor_sdk", "to": "pipeline", "label": "SDK 解码", "classification": "非 ROS 路径", "variant": "dashed", "fromSide": "right", "toSide": "bottom" },
+    { "id": "bag-to-pipeline", "from": "bag", "to": "pipeline", "label": "rosbags 读取", "classification": "主路径", "variant": "emphasis", "fromSide": "right", "toSide": "left" },
+    { "id": "pipeline-to-lerobot", "from": "pipeline", "to": "lerobot", "label": "stats + MP4 编码", "classification": "推荐格式", "variant": "emphasis", "fromSide": "top", "toSide": "left" },
+    { "id": "pipeline-to-hdf5", "from": "pipeline", "to": "hdf5", "label": "h5py 写入", "classification": "学术标准", "variant": "default", "fromSide": "right", "toSide": "left" },
+    { "id": "pipeline-to-zarr", "from": "pipeline", "to": "zarr", "label": "分块数组", "classification": "DP 专用", "variant": "default", "fromSide": "bottom", "toSide": "left" },
+    { "id": "lerobot-to-act", "from": "lerobot", "to": "act", "label": "obs + action chunk", "classification": "训练输入", "variant": "emphasis", "fromSide": "right", "toSide": "left" },
+    { "id": "hdf5-to-act", "from": "hdf5", "to": "act", "label": "obs + actions", "classification": "训练输入", "variant": "default", "fromSide": "right", "toSide": "bottom" },
+    { "id": "zarr-to-dp", "from": "zarr", "to": "dp", "label": "obs horizon", "classification": "训练输入", "variant": "default", "fromSide": "right", "toSide": "left" }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "第一阶段：训练数据格式与模型接口",
+      "items": [
+        "掌握 LeRobot v3 / HDF5 / Zarr 三种主流训练格式",
+        "理解 ACT / Diffusion Policy 的 tensor 契约与归一化统计",
+        "用真实 bag 数据生成可训练的数据集"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "第二阶段：ROS 运行时与数据采集",
+      "items": [
+        "理解 QoS 策略、TF 坐标系、传感器驱动与硬件时间同步",
+        "掌握遥操作采集流程、episode 管理与实时质量监控",
+        "能在采集端诊断数据质量问题的根因"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "第三阶段：规模化处理与工程化",
+      "items": [
+        "用 Ray 把单机脚本升级为分布式批处理",
+        "云存储流式读取 + DVC 数据版本管理",
+        "端到端数据血缘追踪与 CI/CD 质量门禁"
+      ]
+    }
+  ]
+}
