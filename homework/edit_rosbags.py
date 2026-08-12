@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import cast
 from rosbags.rosbag2 import Reader, Writer, StoragePlugin
 from rosbags.typesys import get_typestore, Stores, get_types_from_msg
+import json
 
 
 def remove_topic(src: Path, dst: Path, topic: list[str]) -> None:
@@ -22,6 +23,8 @@ def remove_topic(src: Path, dst: Path, topic: list[str]) -> None:
             if conn.msgtype not in type_store.types:
                 msgdef_text = conn.msgdef[1]
                 type_store.register(get_types_from_msg(msgdef_text, conn.msgtype))
+                # 打印下结果 可注释
+                print(json.dumps(conn._asdict(), default=str, indent=2, ensure_ascii=False))
 
             if conn.topic in topic:
                 continue
