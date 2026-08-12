@@ -6,3 +6,7 @@
 
 # ROS2 官方文档（单独管理，不纳入此仓库）
 /ros2_documentation/
+
+# 防止生成的东西提交
+*.mcap
+metadata.yaml
