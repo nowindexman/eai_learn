@@ -6,6 +6,10 @@ from rosbags.highlevel import AnyReader
 bag_path = Path("/Users/zhangyawen/Documents/www/zyw/python/eai_learn/2026-08-07-08-55-59.bag")
 
 with AnyReader([bag_path]) as reader:
+    # for conn in reader.connections:
+    #     print(conn)
+    # exit
+
     wantConnsStr = ["/robot/joint_states"]
 
     conns = [
