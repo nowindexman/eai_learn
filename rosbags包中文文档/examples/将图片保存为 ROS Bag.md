@@ -91,4 +91,4 @@ def save_images() -> None:
 
 ---
 
-[← 注册自定义类型](register_types.md) | [与原生 ROS 配合使用 →](use_with_native.md)
+[← 注册自定义类型](注册自定义消息类型.md) | [与原生 ROS 配合使用 →](与 Native ROS 栈配合使用.md)

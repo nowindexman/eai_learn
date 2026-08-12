@@ -105,4 +105,4 @@ def offset_timestamps(src: Path, dst: Path, offset: int) -> None:
 
 ---
 
-[← 编辑消息定义](edit_message_definition.md) | [注册自定义类型 →](register_types.md)
+[← 编辑消息定义](编辑消息定义.md) | [注册自定义类型 →](注册自定义消息类型.md)

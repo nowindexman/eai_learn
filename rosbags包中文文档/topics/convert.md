@@ -31,4 +31,4 @@ $ rosbags-convert foo.bag --dst /path/to/bar
 $ rosbags-convert bar --dst /path/to/foo.bag
 ```
 
-[← 序列化/反序列化](serde.md) | [示例 →](../examples/convert_custom_typestore.md)
+[← 序列化/反序列化](serde.md) | [示例 →](../examples/使用自定义%20Typestore%20进行转换.md)

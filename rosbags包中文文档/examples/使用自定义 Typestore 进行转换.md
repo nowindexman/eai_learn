@@ -50,4 +50,4 @@ rosbags-convert \
 
 ---
 
-[← 格式转换](../topics/convert.md) | [编辑消息定义 →](edit_message_definition.md)
+[← 格式转换](../topics/convert.md) | [编辑消息定义 →](编辑消息定义.md)
