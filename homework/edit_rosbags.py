@@ -2,8 +2,8 @@ from os import remove
 from pathlib import Path
 
 from typing import cast
-from rosbags.rosbag2 import Reader, Writer
-from rosbags.typesys import get_typestore, Stores
+from rosbags.rosbag2 import Reader, Writer, StoragePlugin
+from rosbags.typesys import get_typestore, Stores, get_types_from_msg
 
 
 def remove_topic(src: Path, dst: Path, topic: list[str]) -> None:
@@ -11,19 +11,26 @@ def remove_topic(src: Path, dst: Path, topic: list[str]) -> None:
     type_store = get_typestore(Stores.LATEST)
 
     # 读写地址 version=8 是一个通用版本了
-    with Reader(src) as reader, Writer(dst, version=8) as writer:
+    with Reader(src) as reader, Writer(dst, version=8, storage_plugin=StoragePlugin.MCAP) as writer:
 
         # 注册conn
         conn_map = {}
         for conn in reader.connections:
+            # 如果 msgtype 不在 type_store 中 则注册！！！
+            # 如果 msgtype 不在 type_store 中 则注册！！！
+            # 如果 msgtype 不在 type_store 中 则注册！！！
+            if conn.msgtype not in type_store.types:
+                msgdef_text = conn.msgdef[1]
+                type_store.register(get_types_from_msg(msgdef_text, conn.msgtype))
+
             if conn.topic in topic:
                 continue
             ext = cast('ConnectionExtRosbag2', conn.ext)
             conn_map[conn.id] = writer.add_connection(
                 topic=conn.topic,
                 msgtype=conn.msgtype,
+                # typestore 和 msgdef 是互斥的 不能同时使用
                 typestore=type_store,
-                msgdef=conn.msgdef,
                 serialization_format=ext.serialization_format,
                 offered_qos_profiles=ext.offered_qos_profiles,
             )
@@ -40,6 +47,6 @@ def remove_topic(src: Path, dst: Path, topic: list[str]) -> None:
 if __name__ == '__main__':
     remove_topic(
         src=Path('/Users/zhangyawen/Documents/www/zyw/python/eai_learn/标准网上下载.mcap'),
-        dst=Path('./数据采集样本1'),
+        dst=Path('./数据采集样本3'),
         topic=['/right_camera/image/compressed', '/left_camera/image/compressed'],
     )
