@@ -2,8 +2,11 @@ from pathlib import Path
 
 from rosbags.highlevel import AnyReader
 
-# 引入地址
-bag_path = Path("/Users/zhangyawen/Documents/www/zyw/python/eai_learn/2026-08-07-08-55-59.bag")
+# 项目根目录（homework/ 的上一级）
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+# bag 文件路径（请替换为自己的数据文件）
+bag_path = PROJECT_ROOT / "2026-08-07-08-55-59.bag"
 
 with AnyReader([bag_path]) as reader:
     # for conn in reader.connections:

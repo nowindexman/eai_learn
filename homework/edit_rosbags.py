@@ -48,8 +48,11 @@ def remove_topic(src: Path, dst: Path, topic: list[str]) -> None:
 
 
 if __name__ == '__main__':
+    # 项目根目录（homework/ 的上一级）
+    PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
     remove_topic(
-        src=Path('/Users/zhangyawen/Documents/www/zyw/python/eai_learn/标准网上下载.mcap'),
-        dst=Path('./数据采集样本3'),
+        src=PROJECT_ROOT / '标准网上下载.mcap',
+        dst=PROJECT_ROOT / '数据采集样本3',
         topic=['/right_camera/image/compressed', '/left_camera/image/compressed'],
     )
